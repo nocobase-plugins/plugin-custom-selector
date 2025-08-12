@@ -7,8 +7,8 @@
  * For more information, please refer to: https://www.nocobase.com/agreement.
  */
 
-import React, { useMemo } from 'react';
-import { observer, useField, useFieldSchema } from '@formily/react';
+import React, { FC, useMemo } from 'react';
+import { connect, mapReadPretty, observer, useField, useFieldSchema } from '@formily/react';
 import { useCollection, useCollectionRecord } from '@nocobase/client';
 import { ModalSelector } from './ModalSelector';
 import { DropdownSelector } from './DropdownSelector';
@@ -22,7 +22,7 @@ interface CustomSelectorProps {
   renderValue?: string;
 }
 
-export const CustomSelector: React.FC<CustomSelectorProps> = observer(
+const CustomSelectorEditable: FC<CustomSelectorProps> = observer(
   ({ value, onChange, placeholder, renderItem, renderValue }) => {
     // Hooks
     const field = useField();
@@ -101,5 +101,11 @@ export const CustomSelector: React.FC<CustomSelectorProps> = observer(
     }
   },
 );
+
+const CustomSelectorReadPretty: FC<any> = ({ value, ...otherProps }) => {
+    return <span>{value || '-'}</span>;
+};
+
+export const CustomSelector: FC<any> = connect(CustomSelectorEditable, mapReadPretty(CustomSelectorReadPretty));
 
 CustomSelector.displayName = 'CustomSelector';
