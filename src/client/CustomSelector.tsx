@@ -23,7 +23,7 @@ interface CustomSelectorProps {
 }
 
 const CustomSelectorEditable: FC<CustomSelectorProps> = observer(
-  ({ value, onChange, placeholder, renderItem, renderValue }) => {
+  ({ value, onChange, placeholder, renderItem, renderValue, ...otherProps }) => {
     // Hooks
     const field = useField();
     const fieldSchema = useFieldSchema();
@@ -60,6 +60,10 @@ const CustomSelectorEditable: FC<CustomSelectorProps> = observer(
       return collection.getField(fieldSchema['name']) || collection.getField(fieldSchema['x-collection-field']);
     }, [collection, fieldSchema]);
 
+    const searchFields = useMemo(() => {
+      return fieldSchema['x-component-props']?.searchFields || field?.componentProps?.searchFields || [];
+    }, [fieldSchema, field]);
+
     // Check if field is required
     const isRequired = useMemo(() => {
       // Check field schema required property
@@ -91,6 +95,7 @@ const CustomSelectorEditable: FC<CustomSelectorProps> = observer(
       isMultiple: customAllowMultiple,
       collection,
       record,
+      searchFields,
     };
 
     // Render appropriate selector based on mode

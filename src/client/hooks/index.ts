@@ -8,3 +8,4 @@
  */
 
 export { useSelectedItems } from './useSelectedItems';
+export { useSelectorData } from './useSelectorData';

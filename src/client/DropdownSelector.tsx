@@ -7,16 +7,15 @@
  * For more information, please refer to: https://www.nocobase.com/agreement.
  */
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { List, Spin } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
 import { observer } from '@formily/react';
-import { useRequest } from '@nocobase/client';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
-import { SelectorCommonProps, buildQueryParams, createDebouncedSearch } from './utils';
+import { SelectorCommonProps } from './utils';
 import { ValueRenderer, ItemRenderer } from './components';
-import { useSelectedItems } from './hooks';
+import { useSelectedItems, useSelectorData } from './hooks';
 import { NAMESPACE } from './constant';
 
 export const DropdownSelector: React.FC<SelectorCommonProps> = observer(
@@ -31,12 +30,11 @@ export const DropdownSelector: React.FC<SelectorCommonProps> = observer(
     isMultiple,
     collection,
     record,
+    searchFields,
   }) => {
     const { t } = useTranslation(NAMESPACE);
 
     // State management
-    const [search, setSearch] = useState('');
-    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [dropdownVisible, setDropdownVisible] = useState(false);
     const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number }>({
       top: 0,
@@ -49,44 +47,22 @@ export const DropdownSelector: React.FC<SelectorCommonProps> = observer(
     const containerRef = useRef<HTMLDivElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
+    const { search, setSearch, listData, loading, resetSearch } = useSelectorData({
+      collectionField,
+      collection,
+      record,
+      pageSize: 100,
+      enabled: dropdownVisible,
+      initialPage: 1,
+      searchFields,
+    });
+
     // Selected items management
     const { selectedItems, toggleItemSelection, removeItem, removeLastItem } = useSelectedItems(
       value,
       isMultiple,
       collectionField,
     );
-
-    // Debounced search handling
-    const debouncedSetSearch = createDebouncedSearch(setDebouncedSearch);
-
-    useEffect(() => {
-      debouncedSetSearch(search);
-    }, [search, debouncedSetSearch]);
-
-    // Build query parameters
-    const queryParams = useMemo(() => {
-      return buildQueryParams(collectionField, debouncedSearch, collection, record, 1, 10);
-    }, [collectionField, debouncedSearch, collection, record]);
-
-    // Data query
-    const { data, loading, run } = useRequest(
-      {
-        resource: collectionField?.target,
-        action: 'list',
-        params: queryParams,
-      },
-      {
-        manual: true,
-        refreshDeps: [queryParams],
-      },
-    );
-
-    // Request data when dropdown is visible
-    useEffect(() => {
-      if (dropdownVisible && collectionField?.target && queryParams) {
-        run();
-      }
-    }, [dropdownVisible, collectionField?.target, queryParams, run]);
 
     // Search input handler
     const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,10 +120,9 @@ export const DropdownSelector: React.FC<SelectorCommonProps> = observer(
     // Clear search content when dropdown is hidden
     useEffect(() => {
       if (!dropdownVisible) {
-        setSearch('');
-        setDebouncedSearch('');
+        resetSearch();
       }
-    }, [dropdownVisible]);
+    }, [dropdownVisible, resetSearch]);
 
     // Listen for window resize and scroll events to recalculate dropdown position
     useEffect(() => {
@@ -211,11 +186,10 @@ export const DropdownSelector: React.FC<SelectorCommonProps> = observer(
         if (!isMultiple) {
           // Single selection mode: close dropdown and clear search
           setDropdownVisible(false);
-          setSearch('');
-          setDebouncedSearch('');
+          resetSearch();
         }
       },
-      [isMultiple, toggleItemSelection, onChange],
+      [isMultiple, toggleItemSelection, onChange, resetSearch],
     );
 
     // Handle clear all
@@ -226,9 +200,6 @@ export const DropdownSelector: React.FC<SelectorCommonProps> = observer(
       },
       [onChange],
     );
-
-    // Get list data
-    const listData = data?.data || [];
 
     // Check if there is a value and it's not empty
     const hasValue = isMultiple

@@ -7,15 +7,14 @@
  * For more information, please refer to: https://www.nocobase.com/agreement.
  */
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Modal, Input, List, Pagination, Spin, Button, Space } from 'antd';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { observer, Schema } from '@formily/react';
-import { useRequest } from '@nocobase/client';
 import { useTranslation } from 'react-i18next';
-import { SelectorCommonProps, buildQueryParams, createDebouncedSearch } from './utils';
+import { SelectorCommonProps } from './utils';
 import { ValueRenderer, ItemRenderer } from './components';
-import { useSelectedItems } from './hooks';
+import { useSelectedItems, useSelectorData } from './hooks';
 import { NAMESPACE } from './constant';
 
 export const ModalSelector: React.FC<SelectorCommonProps> = observer(
@@ -30,14 +29,12 @@ export const ModalSelector: React.FC<SelectorCommonProps> = observer(
     isMultiple,
     collection,
     record,
+    searchFields,
   }) => {
     const { t } = useTranslation(NAMESPACE);
 
     // State management
     const [visible, setVisible] = useState(false);
-    const [search, setSearch] = useState('');
-    const [debouncedSearch, setDebouncedSearch] = useState('');
-    const [currentPage, setCurrentPage] = useState(1);
     const [pageSize] = useState(10);
 
     // Refs
@@ -46,37 +43,17 @@ export const ModalSelector: React.FC<SelectorCommonProps> = observer(
     // Selected items management
     const { selectedItems, toggleItemSelection, removeItem } = useSelectedItems(value, isMultiple, collectionField);
 
-    // Debounced search handling
-    const debouncedSetSearch = createDebouncedSearch(setDebouncedSearch, () => setCurrentPage(1));
-
-    useEffect(() => {
-      debouncedSetSearch(search);
-    }, [search]);
-
-    // Build query parameters
-    const queryParams = useMemo(() => {
-      return buildQueryParams(collectionField, debouncedSearch, collection, record, currentPage, pageSize);
-    }, [collectionField, debouncedSearch, collection, record, currentPage, pageSize]);
-
-    // Data query
-    const { data, loading, run } = useRequest(
-      {
-        resource: collectionField?.target,
-        action: 'list',
-        params: queryParams,
-      },
-      {
-        manual: true,
-        refreshDeps: [queryParams],
-      },
-    );
-
-    // Request data when modal is visible
-    useEffect(() => {
-      if (visible && collectionField?.target && queryParams) {
-        run();
-      }
-    }, [visible, collectionField?.target, queryParams, run]);
+    // Data fetching and search
+    const { search, setSearch, debouncedSearch, currentPage, setCurrentPage, listData, total, loading, resetSearch } =
+      useSelectorData({
+        collectionField,
+        collection,
+        record,
+        pageSize,
+        enabled: visible,
+        initialPage: 1,
+        searchFields,
+      });
 
     // Handle opening modal
     const handleOpen = useCallback(() => {
@@ -86,15 +63,16 @@ export const ModalSelector: React.FC<SelectorCommonProps> = observer(
     // Handle closing modal
     const handleClose = useCallback(() => {
       setVisible(false);
-      setSearch('');
-      setDebouncedSearch('');
-      setCurrentPage(1);
-    }, []);
+      resetSearch();
+    }, [resetSearch]);
 
     // Handle search input
-    const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-      setSearch(e.target.value);
-    }, []);
+    const handleSearch = useCallback(
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearch(e.target.value);
+      },
+      [setSearch],
+    );
 
     // Handle modal opening focus
     const handleAfterOpenChange = useCallback((open: boolean) => {
@@ -142,10 +120,6 @@ export const ModalSelector: React.FC<SelectorCommonProps> = observer(
       },
       [onChange],
     );
-
-    // Get list data
-    const listData = data?.data || [];
-    const total = data?.meta?.count || 0;
 
     // Pagination configuration
     const paginationConfig = {

@@ -22,6 +22,7 @@ export interface SelectorCommonProps {
   isMultiple: boolean;
   collection: any;
   record: any;
+  searchFields?: string[];
 }
 
 // Query parameters builder utility
@@ -32,6 +33,7 @@ export const buildQueryParams = (
   record: any,
   page = 1,
   pageSize = 10,
+  searchFields?: string[],
 ) => {
   if (!collectionField?.target) return null;
 
@@ -49,8 +51,12 @@ export const buildQueryParams = (
       // Get all fields from target collection
       const allFields = targetCollection.getFields();
 
+      const narrowedFields = Array.isArray(searchFields) && searchFields.length > 0
+        ? allFields.filter((field: any) => searchFields.includes(field.name))
+        : allFields;
+
       // Filter fields that can be searched with $includes
-      const searchableFields = allFields
+      const searchableFields = narrowedFields
         .filter((field: any) => {
           if (!field || !field.name) return false;
 

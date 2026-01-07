@@ -42,5 +42,7 @@
   "Opens a popup window for selection, suitable for scenarios with many options or complex display requirements": "Opens a popup window for selection, suitable for scenarios with many options or complex display requirements",
   "Configuration Description": "Configuration Description",
   "Compact display, quick selection, suitable for simple scenarios": "Compact display, quick selection, suitable for simple scenarios",
-  "Rich display, supports search and pagination, suitable for complex scenarios": "Rich display, supports search and pagination, suitable for complex scenarios"
+  "Rich display, supports search and pagination, suitable for complex scenarios": "Rich display, supports search and pagination, suitable for complex scenarios",
+  "Fields allowed to be searched": "Fields allowed to be searched",
+  "If empty, the selector will search all eligible fields. Choose specific fields to limit search scope.": "If empty, the selector will search all eligible fields. Choose specific fields to limit search scope."
 }
