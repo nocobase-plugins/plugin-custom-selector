@@ -31,6 +31,7 @@ export const DropdownSelector: React.FC<SelectorCommonProps> = observer(
     collection,
     record,
     searchFields,
+    dataScopeFilter,
   }) => {
     const { t } = useTranslation(NAMESPACE);
 
@@ -55,6 +56,7 @@ export const DropdownSelector: React.FC<SelectorCommonProps> = observer(
       enabled: dropdownVisible,
       initialPage: 1,
       searchFields,
+      dataScopeFilter,
     });
 
     // Selected items management

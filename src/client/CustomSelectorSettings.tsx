@@ -157,6 +157,8 @@ const FieldsInfoDisplay = ({ fields, t, parameterName = 'item' }) => {
 };
 
 // Configuration Modal Component with Tabs
+
+
 const CustomSelectorConfigModal = ({
   visible,
   onCancel,
@@ -170,6 +172,10 @@ const CustomSelectorConfigModal = ({
 }) => {
   const [form] = Form.useForm();
   const [activeTab, setActiveTab] = useState('basic'); // Default to basic configuration tab
+  // State for Data Scope Modal
+  const [dataScopeModalVisible, setDataScopeModalVisible] = useState(false);
+  const [dataScopeFilter, setDataScopeFilter] = useState(() => fieldSchema['x-component-props']?.dataScopeFilter || {});
+  const collection = useCollection();
 
   // Initialize form values when modal opens
   React.useEffect(() => {
@@ -295,6 +301,35 @@ const CustomSelectorConfigModal = ({
                   <div style={{ color: '#666', fontSize: '13px', lineHeight: '1.6', marginBottom: '12px' }}>
                     {t('If empty, the selector will search all eligible fields. Choose specific fields to limit search scope.')}
                   </div>
+
+                  <Form.Item
+                    label={t('Set the data scope (JSON filter)')}
+                    name="dataScopeFilter"
+                    style={{ marginBottom: '12px' }}
+                  >
+                    <TextArea
+                      rows={6}
+                      value={typeof dataScopeFilter === 'string' ? dataScopeFilter : JSON.stringify(dataScopeFilter, null, 2)}
+                      onChange={e => {
+                        setDataScopeFilter(e.target.value);
+                        let parsed = {};
+                        try {
+                          parsed = typeof e.target.value === 'string' ? JSON.parse(e.target.value) : e.target.value;
+                        } catch (err) {
+                          // ignore parse error for now, only save valid JSON on submit
+                          return;
+                        }
+                        form.setFieldValue(['dataScopeFilter'], parsed);
+                        fieldSchema['x-component-props'].dataScopeFilter = parsed;
+                        field.componentProps.dataScopeFilter = parsed;
+                      }}
+                      placeholder={t('e.g. { "username": "admin" }')}
+                      style={{ fontFamily: 'monospace', fontSize: 13 }}
+                    />
+                    <div style={{ color: '#888', fontSize: 12, marginTop: 8 }}>
+                      {t('You can enter any valid filter JSON. Example: { "username": "admin" }')}
+                    </div>
+                  </Form.Item>
 
                   <div
                     style={{

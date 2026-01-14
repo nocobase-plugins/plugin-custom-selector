@@ -19,6 +19,7 @@ interface UseSelectorDataOptions {
   enabled?: boolean;
   initialPage?: number;
   searchFields?: string[];
+  dataScopeFilter?: any;
 }
 
 export const useSelectorData = ({
@@ -29,6 +30,7 @@ export const useSelectorData = ({
   enabled = true,
   initialPage = 1,
   searchFields,
+  dataScopeFilter,
 }: UseSelectorDataOptions) => {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -44,8 +46,17 @@ export const useSelectorData = ({
   }, [search, debouncedSetSearch]);
 
   const queryParams = useMemo(() => {
-    return buildQueryParams(collectionField, debouncedSearch, collection, record, currentPage, pageSize, searchFields);
-  }, [collectionField, debouncedSearch, collection, record, currentPage, pageSize, searchFields]);
+    return buildQueryParams(
+      collectionField,
+      debouncedSearch,
+      collection,
+      record,
+      currentPage,
+      pageSize,
+      searchFields,
+      dataScopeFilter,
+    );
+  }, [collectionField, debouncedSearch, collection, record, currentPage, pageSize, searchFields, dataScopeFilter]);
 
   const { data, loading, run } = useRequest(
     {

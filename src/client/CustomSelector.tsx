@@ -64,6 +64,10 @@ const CustomSelectorEditable: FC<CustomSelectorProps> = observer(
       return fieldSchema['x-component-props']?.searchFields || field?.componentProps?.searchFields || [];
     }, [fieldSchema, field]);
 
+    const dataScopeFilter = useMemo(() => {
+      return fieldSchema['x-component-props']?.dataScopeFilter || field?.componentProps?.dataScopeFilter || null;
+    }, [fieldSchema, field]);
+
     // Check if field is required
     const isRequired = useMemo(() => {
       // Check field schema required property
@@ -96,6 +100,7 @@ const CustomSelectorEditable: FC<CustomSelectorProps> = observer(
       collection,
       record,
       searchFields,
+      dataScopeFilter,
     };
 
     // Render appropriate selector based on mode

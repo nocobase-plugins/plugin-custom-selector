@@ -23,17 +23,19 @@ export interface SelectorCommonProps {
   collection: any;
   record: any;
   searchFields?: string[];
+  dataScopeFilter?: any;
 }
 
 // Query parameters builder utility
 export const buildQueryParams = (
-  collectionField: any,
-  search: string,
-  collection: any,
-  record: any,
+  collectionField,
+  search,
+  collection,
+  record,
   page = 1,
   pageSize = 10,
-  searchFields?: string[],
+  searchFields,
+  dataScopeFilter,
 ) => {
   if (!collectionField?.target) return null;
 
@@ -41,133 +43,100 @@ export const buildQueryParams = (
     page,
     pageSize,
   };
+  
+  console.debug('[CustomSelector] dataScopeFilter applied:', JSON.stringify(dataScopeFilter));
+
+  // Always apply dataScopeFilter as the base filter if present
+  let baseFilter = undefined;
+  if (dataScopeFilter && typeof dataScopeFilter === 'object' && Object.keys(dataScopeFilter).length > 0) {
+    baseFilter = dataScopeFilter;
+    console.debug('[CustomSelector] dataScopeFilter applied:', JSON.stringify(dataScopeFilter));
+  }
 
   // Search filter - support multiple fields
-  if (search.trim()) {
-    // Get target collection to access all fields
+  let searchFilter = undefined;
+  if (search && search.trim()) {
     const targetCollection = collection?.collectionManager?.getCollection(collectionField.target);
-
     if (targetCollection) {
-      // Get all fields from target collection
       const allFields = targetCollection.getFields();
-
       const narrowedFields = Array.isArray(searchFields) && searchFields.length > 0
-        ? allFields.filter((field: any) => searchFields.includes(field.name))
+        ? allFields.filter(field => searchFields.includes(field.name))
         : allFields;
-
-      // Filter fields that can be searched with $includes
-      const searchableFields = narrowedFields
-        .filter((field: any) => {
-          if (!field || !field.name) return false;
-
-          // Exclude sensitive field types that shouldn't be searchable
-          const excludedTypes = ['password', 'token'];
-          const excludedInterfaces = ['password', 'token'];
-
-          // Exclude sensitive fields
-          if (excludedTypes.includes(field.type) || excludedInterfaces.includes(field.interface)) {
-            return false;
+      const searchableFields = narrowedFields.filter(field => {
+        if (!field || !field.name) return false;
+        const excludedTypes = ['password', 'token'];
+        const excludedInterfaces = ['password', 'token'];
+        if (excludedTypes.includes(field.type) || excludedInterfaces.includes(field.interface)) return false;
+        const sensitiveFieldNames = ['password', 'token', 'resetToken', 'accessToken', 'refreshToken', 'apiToken'];
+        if (sensitiveFieldNames.some(name => field.name.toLowerCase().includes(name.toLowerCase()))) return false;
+        const supportedTypes = [
+          'string', 'text', 'email', 'phone', 'uid', 'nanoid', 'integer', 'bigInt', 'float', 'double', 'decimal',
+        ];
+        const supportedInterfaces = [
+          'input', 'textarea', 'email', 'phone', 'integer', 'number', 'percent', 'currency', 'select', 'radioGroup', 'checkboxGroup',
+        ];
+        return supportedTypes.includes(field.type) || supportedInterfaces.includes(field.interface);
+      });
+      const searchConditions = searchableFields.map(field => {
+        if (['integer', 'bigInt', 'float', 'double', 'decimal'].includes(field.type)) {
+          const numericValue = parseFloat(search.trim());
+          if (!isNaN(numericValue)) {
+            return {
+              $or: [{ [field.name]: { $includes: search.trim() } }, { [field.name]: { $eq: numericValue } }],
+            };
           }
-
-          // Exclude fields with sensitive names
-          const sensitiveFieldNames = ['password', 'token', 'resetToken', 'accessToken', 'refreshToken', 'apiToken'];
-          if (sensitiveFieldNames.some((name) => field.name.toLowerCase().includes(name.toLowerCase()))) {
-            return false;
-          }
-
-          // Only include fields that support $includes operation
-          const supportedTypes = [
-            'string',
-            'text',
-            'email',
-            'phone',
-            'uid',
-            'nanoid',
-            'integer',
-            'bigInt',
-            'float',
-            'double',
-            'decimal',
-          ];
-
-          const supportedInterfaces = [
-            'input',
-            'textarea',
-            'email',
-            'phone',
-            'integer',
-            'number',
-            'percent',
-            'currency',
-            'select',
-            'radioGroup',
-            'checkboxGroup',
-          ];
-
-          // Check both type and interface to ensure compatibility
-          return supportedTypes.includes(field.type) || supportedInterfaces.includes(field.interface);
-        })
-        .map((field: any) => ({
-          name: field.name,
-          type: field.type,
-          interface: field.interface,
-        }));
-
-      // Build $or query for compatible fields only
-      if (searchableFields.length > 0) {
-        const searchTerm = search.trim();
-
-        // Create search conditions for each compatible field
-        const searchConditions = searchableFields.map((field: any) => {
-          // For numeric fields, try exact match if search term is numeric
-          if (['integer', 'bigInt', 'float', 'double', 'decimal'].includes(field.type)) {
-            const numericValue = parseFloat(searchTerm);
-            if (!isNaN(numericValue)) {
-              return {
-                $or: [{ [field.name]: { $includes: searchTerm } }, { [field.name]: { $eq: numericValue } }],
-              };
-            }
-          }
-
-          // For other compatible fields, use includes search
-          return {
-            [field.name]: {
-              $includes: searchTerm,
-            },
-          };
-        });
-
-        params.filter = {
-          $or: searchConditions,
-        };
-      }
+        }
+        return { [field.name]: { $includes: search.trim() } };
+      });
+      searchFilter = { $or: searchConditions };
+      console.debug('[CustomSelector] searchFilter applied:', JSON.stringify(searchFilter));
     } else {
-      // Fallback to original single field search
       const labelField = collectionField.targetKey || 'name' || 'title' || 'label';
-      params.filter = {
-        [labelField]: {
-          $includes: search.trim(),
-        },
-      };
+      searchFilter = { [labelField]: { $includes: search.trim() } };
+      console.debug('[CustomSelector] fallback searchFilter applied:', JSON.stringify(searchFilter));
     }
+  }
+
+  // Combine baseFilter and searchFilter
+  if (baseFilter && searchFilter) {
+    params.filter = { $and: [baseFilter, searchFilter] };
+    console.debug('[CustomSelector] Combined filter:', JSON.stringify(params.filter));
+  } else if (baseFilter) {
+    params.filter = baseFilter;
+    console.debug('[CustomSelector] Only dataScopeFilter used:', JSON.stringify(params.filter));
+  } else if (searchFilter) {
+    params.filter = searchFilter;
+    console.debug('[CustomSelector] Only searchFilter used:', JSON.stringify(params.filter));
   }
 
   // Association field filter
   if (collectionField.foreignKey && record?.data) {
     const sourceValue = record.data[collectionField.sourceKey];
     if (sourceValue !== undefined && sourceValue !== null) {
-      if (['oho', 'o2m'].includes(collectionField.interface)) {
-        params.filter = {
-          ...params.filter,
-          $or: [
-            { [collectionField.foreignKey]: { $is: null } },
-            { [collectionField.foreignKey]: { $eq: sourceValue } },
-          ],
-        };
+      if (["oho", "o2m"].includes(collectionField.interface)) {
+        if (params.filter) {
+          params.filter = {
+            $and: [params.filter, {
+              $or: [
+                { [collectionField.foreignKey]: { $is: null } },
+                { [collectionField.foreignKey]: { $eq: sourceValue } },
+              ],
+            }],
+          };
+          console.debug('[CustomSelector] Association filter appended:', JSON.stringify(params.filter));
+        } else {
+          params.filter = {
+            $or: [
+              { [collectionField.foreignKey]: { $is: null } },
+              { [collectionField.foreignKey]: { $eq: sourceValue } },
+            ],
+          };
+          console.debug('[CustomSelector] Only association filter used:', JSON.stringify(params.filter));
+        }
       }
     }
   }
-
+  console.debug('[CustomSelector] Final query params:', JSON.stringify(params));
   return params;
 };
 

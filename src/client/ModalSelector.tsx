@@ -30,6 +30,7 @@ export const ModalSelector: React.FC<SelectorCommonProps> = observer(
     collection,
     record,
     searchFields,
+    dataScopeFilter,
   }) => {
     const { t } = useTranslation(NAMESPACE);
 
@@ -53,6 +54,7 @@ export const ModalSelector: React.FC<SelectorCommonProps> = observer(
         enabled: visible,
         initialPage: 1,
         searchFields,
+        dataScopeFilter,
       });
 
     // Handle opening modal
