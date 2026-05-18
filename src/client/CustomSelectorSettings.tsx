@@ -15,7 +15,7 @@ import {
   useIsFieldReadPretty,
   useCollectionField,
 } from '@nocobase/client';
-import { Tabs, Input, Form, Modal, Button, message, Radio, Switch } from 'antd';
+import { Tabs, Input, Form, Modal, Button, message, Radio, Switch, Checkbox } from 'antd';
 import _ from 'lodash';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -157,6 +157,8 @@ const FieldsInfoDisplay = ({ fields, t, parameterName = 'item' }) => {
 };
 
 // Configuration Modal Component with Tabs
+
+
 const CustomSelectorConfigModal = ({
   visible,
   onCancel,
@@ -170,6 +172,10 @@ const CustomSelectorConfigModal = ({
 }) => {
   const [form] = Form.useForm();
   const [activeTab, setActiveTab] = useState('basic'); // Default to basic configuration tab
+  // State for Data Scope Modal
+  const [dataScopeModalVisible, setDataScopeModalVisible] = useState(false);
+  const [dataScopeFilter, setDataScopeFilter] = useState(() => fieldSchema['x-component-props']?.dataScopeFilter || {});
+  const collection = useCollection();
 
   // Initialize form values when modal opens
   React.useEffect(() => {
@@ -181,6 +187,7 @@ const CustomSelectorConfigModal = ({
         selectorMode: fieldSchema['x-component-props']?.customSelectorMode || 'dropdown', // Default to dropdown mode
         renderItem: fieldSchema['x-component-props']?.renderItem || dynamicDefaultRenderItem,
         renderValue: fieldSchema['x-component-props']?.renderValue || dynamicDefaultRenderValue,
+        searchFields: fieldSchema['x-component-props']?.searchFields || field?.componentProps?.searchFields || [],
       };
       form.setFieldsValue(initialValues);
     }
@@ -203,6 +210,7 @@ const CustomSelectorConfigModal = ({
       const completeValues = {
         allowMultiple: currentValues.allowMultiple,
         customSelectorMode: currentValues.selectorMode,
+        searchFields: currentValues.searchFields || [],
         renderItem:
           currentValues.renderItem !== undefined
             ? currentValues.renderItem.trim() || dynamicDefaultRenderItem
@@ -275,6 +283,52 @@ const CustomSelectorConfigModal = ({
                         </Radio>
                       </div>
                     </Radio.Group>
+                  </Form.Item>
+
+                  <Form.Item
+                    name="searchFields"
+                    label={t('Fields allowed to be searched')}
+                    style={{ marginBottom: '12px' }}
+                  >
+                    <Checkbox.Group
+                      options={availableFields.map((field) => ({
+                        label: `${field.title || field.name} (${field.name})`,
+                        value: field.name,
+                      }))}
+                    />
+                  </Form.Item>
+
+                  <div style={{ color: '#666', fontSize: '13px', lineHeight: '1.6', marginBottom: '12px' }}>
+                    {t('If empty, the selector will search all eligible fields. Choose specific fields to limit search scope.')}
+                  </div>
+
+                  <Form.Item
+                    label={t('Set the data scope (JSON filter)')}
+                    name="dataScopeFilter"
+                    style={{ marginBottom: '12px' }}
+                  >
+                    <TextArea
+                      rows={6}
+                      value={typeof dataScopeFilter === 'string' ? dataScopeFilter : JSON.stringify(dataScopeFilter, null, 2)}
+                      onChange={e => {
+                        setDataScopeFilter(e.target.value);
+                        let parsed = {};
+                        try {
+                          parsed = typeof e.target.value === 'string' ? JSON.parse(e.target.value) : e.target.value;
+                        } catch (err) {
+                          // ignore parse error for now, only save valid JSON on submit
+                          return;
+                        }
+                        form.setFieldValue(['dataScopeFilter'], parsed);
+                        fieldSchema['x-component-props'].dataScopeFilter = parsed;
+                        field.componentProps.dataScopeFilter = parsed;
+                      }}
+                      placeholder={t('e.g. { "username": "admin" }')}
+                      style={{ fontFamily: 'monospace', fontSize: 13 }}
+                    />
+                    <div style={{ color: '#888', fontSize: 12, marginTop: 8 }}>
+                      {t('You can enter any valid filter JSON. Example: { "username": "admin" }')}
+                    </div>
                   </Form.Item>
 
                   <div
@@ -491,7 +545,7 @@ export function CustomSelectorConfigEditor(props) {
   }, [availableFields]);
 
   const handleModalOk = async (values) => {
-    const { allowMultiple, customSelectorMode, renderItem, renderValue } = values;
+    const { allowMultiple, customSelectorMode, renderItem, renderValue, searchFields } = values;
 
     // If user clears the input, use dynamic default values
     const finalRenderItem = renderItem && renderItem.trim() ? renderItem.trim() : dynamicDefaultRenderItem;
@@ -503,11 +557,13 @@ export function CustomSelectorConfigEditor(props) {
     field.componentProps.renderValue = finalRenderValue;
     field.componentProps.customSelectorMode = customSelectorMode;
     field.componentProps.allowMultiple = allowMultiple;
+    field.componentProps.searchFields = searchFields;
 
     _.set(fieldSchema, 'x-component-props.renderItem', finalRenderItem);
     _.set(fieldSchema, 'x-component-props.renderValue', finalRenderValue);
     _.set(fieldSchema, 'x-component-props.customSelectorMode', customSelectorMode);
     _.set(fieldSchema, 'x-component-props.allowMultiple', allowMultiple);
+    _.set(fieldSchema, 'x-component-props.searchFields', searchFields);
 
     const patchData = {
       schema: {
@@ -518,6 +574,7 @@ export function CustomSelectorConfigEditor(props) {
           customSelectorMode,
           renderItem: finalRenderItem,
           renderValue: finalRenderValue,
+          searchFields,
         },
       },
     };

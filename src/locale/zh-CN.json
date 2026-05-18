@@ -42,5 +42,7 @@
   "Opens a popup window for selection, suitable for scenarios with many options or complex display requirements": "打开弹窗进行选择，适用于选项较多或显示要求复杂的场景",
   "Configuration Description": "配置说明",
   "Compact display, quick selection, suitable for simple scenarios": "紧凑显示，快速选择，适用于简单场景",
-  "Rich display, supports search and pagination, suitable for complex scenarios": "丰富显示，支持搜索和分页，适用于复杂场景"
+  "Rich display, supports search and pagination, suitable for complex scenarios": "丰富显示，支持搜索和分页，适用于复杂场景",
+  "Fields allowed to be searched": "可被搜索的字段",
+  "If empty, the selector will search all eligible fields. Choose specific fields to limit search scope.": "为空时会搜索所有可搜索字段；勾选后仅在指定字段中搜索。"
 }

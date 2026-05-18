@@ -42,5 +42,7 @@
   "Opens a popup window for selection, suitable for scenarios with many options or complex display requirements": "ポップアップウィンドウを開いて選択、オプションが多いまたは複雑な表示要件に適しています",
   "Configuration Description": "設定説明",
   "Compact display, quick selection, suitable for simple scenarios": "コンパクト表示、クイック選択、シンプルなシナリオに適しています",
-  "Rich display, supports search and pagination, suitable for complex scenarios": "リッチ表示、検索とページネーションをサポート、複雑なシナリオに適しています"
+  "Rich display, supports search and pagination, suitable for complex scenarios": "リッチ表示、検索とページネーションをサポート、複雑なシナリオに適しています",
+  "Fields allowed to be searched": "検索対象にできるフィールド",
+  "If empty, the selector will search all eligible fields. Choose specific fields to limit search scope.": "未選択の場合は検索可能な全フィールドを対象とします。限定したい場合はフィールドを選択してください。"
 }

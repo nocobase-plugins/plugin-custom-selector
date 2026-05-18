@@ -22,7 +22,7 @@ class PluginCustomSelector extends Plugin {
     this.app.addComponents({ FCS_Select: CustomSelector });
 
     // extends CollectionFieldInterface
-    const interfaces = ['o2m', 'o2o'];
+    const interfaces = ['o2o', 'oho', 'obo', 'm2o', 'createdBy', 'updatedBy', 'o2m', 'm2m', 'linkTo', 'chinaRegion', 'mbm'];
     interfaces.forEach((interfaceName) => {
       this.app.addFieldInterfaceComponentOption(interfaceName, {
         label: tval('Custom Selector', { ns: NAMESPACE }),
